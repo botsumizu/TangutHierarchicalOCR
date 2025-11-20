@@ -1,3 +1,12 @@
-# THOCR - 分层式西夏文字识别器
-## 项目概述
-这是一个使用分层式识别的西夏文OCR识别器项目
+# TangutHierarchicalOCR
+## Intro 
+## 结构分类
+```
+Single(S)
+Complexed
+    Verticle(V)
+    
+    Horizontal(H)
+
+    Enclosed(E)
+```
