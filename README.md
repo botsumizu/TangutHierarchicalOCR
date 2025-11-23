@@ -1,6 +1,6 @@
 # TangutHierarchicalOCR
 ## Intro
-A OCR model scanning tangut characters hierarchically.
+An OCR model scanning tangut characters hierarchically.
 ## Structure Classification
 Almost all tangut characters can be classified to four sorts:
 ```
