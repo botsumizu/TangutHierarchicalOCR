@@ -1,6 +1,6 @@
 
 # TangutHierarchicalOCR
-Botsumizu
+
 ## Introduction
 
 **TangutHierarchicalOCR (THOCR)** is a hierarchical OCR framework designed for recognizing Tangut characters.
