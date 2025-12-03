@@ -10,9 +10,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# THOCR系统类保持不变
 class THOCRSystem:
-    """THOCR系统"""
     
     def __init__(self, model_dir='.'):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -88,10 +86,10 @@ class THOCRSystem:
             model.load_state_dict(torch.load(structure_model_path, 
                                             map_location=self.device))
             model.eval()
-            print("结构分类器加载成功")
+            print("[S]Load classifier successfully")
             return model.to(self.device)
         except Exception as e:
-            print(f"结构分类器加载失败: {e}")
+            print(f"[E]Failed to load classifier: {e}")
             return None
     
     def load_recognizer(self, structure_type):
@@ -104,20 +102,19 @@ class THOCRSystem:
             model.load_state_dict(torch.load(recognizer_model_path, 
                                             map_location=self.device))
             model.eval()
-            print(f"{structure_type}-识别器加载成功 ({num_classes}类)")
+            print(f"[S]load {structure_type}-recognizer successfully ({num_classes})")
             return model.to(self.device)
         except Exception as e:
-            print(f"{structure_type}识别器加载失败: {e}")
+            print(f"[E]Failed to load {structure_type}-recognizer : {e}")
             return None
     
     def predict_image(self, image):
-        """预测单张图片"""
         if self.structure_classifier is None:
-            return {"error": "结构分类器加载失败"}
+            return {"error": "Failed to load classifier"}
         
         for structure_type, recognizer in self.recognizers.items():
             if recognizer is None:
-                return {"error": f"{structure_type}识别器加载失败"}
+                return {"error": f"Failed to load {structure_type}-reconizer"}
         
         try:
             input_tensor = self.transform(image).unsqueeze(0).to(self.device)
@@ -127,8 +124,7 @@ class THOCRSystem:
                 structure_pred = torch.argmax(structure_output, 1).item()
                 structure_label = self.structure_classes[structure_pred]
                 
-                structure_map = {'enclosed': 'E', 'horizontal': 'H',
-                               'single': 'S', 'vertical': 'V'}
+                structure_map = {'enclosed': 'E', 'horizontal': 'H','single': 'S', 'vertical': 'V'}
                 structure_code = structure_map[structure_label]
                 
                 recognizer = self.recognizers[structure_code]
@@ -148,20 +144,18 @@ class THOCRSystem:
                 'character_count': sum(len(chars) for chars in self.recognition_classes.values())
             }
         except Exception as e:
-            return {"status": "error", "error": f"识别失败: {str(e)}"}
+            return {"status": "error", "error": f"Failed to recognizer: {str(e)}"}
 
 # ========== CORS 中间件 ==========
 @app.after_request
 def add_cors_headers(response):
-    """为所有响应添加CORS头"""
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
     response.headers['Access-Control-Allow-Credentials'] = 'true'
-    response.headers['Access-Control-Max-Age'] = '86400'  # 24小时
+    response.headers['Access-Control-Max-Age'] = '86400'  
     return response
 
-# 处理OPTIONS预检请求的装饰器
 def handle_options_request(func):
     def wrapper(*args, **kwargs):
         if request.method == 'OPTIONS':
@@ -174,10 +168,8 @@ def handle_options_request(func):
     wrapper.__name__ = func.__name__
     return wrapper
 
-# ========== API 路由 ==========
 @app.route('/')
 def index():
-    """API首页"""
     character_count = sum(len(chars) for chars in thocr.recognition_classes.values())
     return jsonify({
         'status': 'success',
@@ -191,10 +183,10 @@ def index():
         },
         'total_characters': character_count,
         'structure_types': {
-            'S': '单一结构',
-            'V': '垂直结构', 
-            'H': '水平结构',
-            'E': '包围结构'
+            'S': '独立型',
+            'V': '竖叠型', 
+            'H': '横叠型',
+            'E': '半围型'
         },
         'cors_enabled': True,
         'timestamp': datetime.now().isoformat()
@@ -203,76 +195,66 @@ def index():
 @app.route('/recognize', methods=['POST', 'OPTIONS'])
 @handle_options_request
 def recognize():
-    """识别西夏文字符"""
     try:
-        # 检查请求中是否包含图片
         if 'image' not in request.files and 'image_base64' not in request.form:
             return jsonify({
                 'status': 'error',
-                'error': '请提供图片文件或Base64编码的图片',
+                'error': 'Please upload image',
                 'supported_methods': ['file upload (multipart/form-data)', 'base64 (application/x-www-form-urlencoded)']
             }), 400
         
-        # 处理文件上传
         if 'image' in request.files:
             file = request.files['image']
             if file.filename == '':
-                return jsonify({'status': 'error', 'error': '未选择文件'}), 400
-            
-            # 验证文件类型
+                return jsonify({'status': 'error', 'error': 'No image file'}), 400
+
             allowed_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}
             file_ext = os.path.splitext(file.filename)[1].lower()
             if file_ext not in allowed_extensions:
                 return jsonify({
                     'status': 'error', 
-                    'error': f'不支持的图片格式。支持的格式: {", ".join(allowed_extensions)}'
+                    'error': f'THOCR can not process this file: {", ".join(allowed_extensions)}'
                 }), 400
             
             try:
                 image = Image.open(file.stream).convert('RGB')
             except Exception as e:
-                return jsonify({'status': 'error', 'error': f'无法打开图片文件: {str(e)}'}), 400
-        
-        # 处理Base64编码的图片
+                return jsonify({'status': 'error', 'error': f'failed to open image: {str(e)}'}), 400
+
         elif 'image_base64' in request.form:
             base64_str = request.form['image_base64']
             try:
-                # 去除data:image/jpeg;base64,前缀
+
                 if ',' in base64_str:
                     base64_str = base64_str.split(',')[1]
                 
                 image_data = base64.b64decode(base64_str)
                 image = Image.open(io.BytesIO(image_data)).convert('RGB')
             except Exception as e:
-                return jsonify({'status': 'error', 'error': f'Base64解码失败: {str(e)}'}), 400
+                return jsonify({'status': 'error', 'error': f'Base64 - failed to decode: {str(e)}'}), 400
         
-        # 验证图片尺寸
         if image.width < 50 or image.height < 50:
-            return jsonify({'status': 'error', 'error': '图片尺寸过小，建议至少50x50像素'}), 400
+            return jsonify({'status': 'error', 'error': 'The size of image is too small, please upload image larger than 50px x 50px'}), 400
         
-        # 进行识别
         result = thocr.predict_image(image)
         
-        # 添加时间戳
         if isinstance(result, dict) and 'status' in result and result['status'] == 'success':
             result['timestamp'] = datetime.now().isoformat()
-            result['processing_time'] = '实时'
+            result['processing_time'] = 'real time'
         
         return jsonify(result)
             
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'error': f'处理请求时出错: {str(e)}',
+            'error': f'failed to requist: {str(e)}',
             'timestamp': datetime.now().isoformat()
         }), 500
 
 @app.route('/health', methods=['GET', 'OPTIONS'])
 @handle_options_request
 def health_check():
-    """健康检查端点"""
     try:
-        # 检查所有模型是否已加载
         models_loaded = {
             'structure_classifier': thocr.structure_classifier is not None,
             'S_recognizer': thocr.recognizers['S'] is not None,
@@ -296,53 +278,42 @@ def health_check():
 
 @app.errorhandler(404)
 def not_found(error):
-    """处理404错误"""
     return jsonify({
         'status': 'error',
-        'error': '请求的API端点不存在',
+        'error': 'The api does not exist',
         'available_endpoints': ['/', '/recognize', '/health'],
         'timestamp': datetime.now().isoformat()
     }), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    """处理500错误"""
     return jsonify({
         'status': 'error',
-        'error': '服务器内部错误',
+        'error': 'Failed to fetch the server',
         'timestamp': datetime.now().isoformat()
     }), 500
 
-# ========== 主程序 ==========
 if __name__ == '__main__':
-    # 初始化THOCR系统
-    print("正在初始化THOCR系统...")
+    print("THOCR")
     try:
         thocr = THOCRSystem()
         character_count = sum(len(chars) for chars in thocr.recognition_classes.values())
-        print(f"THOCR系统初始化成功")
-        print(f"支持的字符总数: {character_count}")
-        print(f"运行设备: {thocr.device}")
-        print(f"CORS已启用，支持跨域请求")
     except Exception as e:
-        print(f"THOCR系统初始化失败: {e}")
+        print(f"[E]Failed to initialize: {e}")
         thocr = None
     
     print("\n" + "="*60)
-    print("THOCR API 服务已启动")
+    print("THOCR API is running")
     print("="*60)
-    print("API端点:")
-    print("  GET  /          - 获取API信息")
-    print("  POST /recognize - 识别西夏文字符")
-    print("  GET  /health    - 健康检查")
-    print("\nCORS配置:")
+    print("API:")
+    print("  GET  /          ")
+    print("  POST /recognize ")
+    print("  GET  /health    ")
+    print("\nCORS:")
     print("  Access-Control-Allow-Origin: *")
-    print("  支持跨域请求，前端可正常访问")
-    print("\n启动信息:")
-    print(f"  服务地址: http://0.0.0.0:5000")
-    print(f"  本地访问: http://localhost:5000")
-    print(f"  网络访问: http://[你的IP地址]:5000")
+    print("\ninfo:")
+    print(f"http://0.0.0.0:5000")
+    print(f"http://localhost:5000")
     print("="*60)
     
-    # 启动Flask应用
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
