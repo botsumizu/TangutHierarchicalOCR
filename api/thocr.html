@@ -467,7 +467,6 @@
     </div>
 
     <script>
-        // DOM元素
         const fileInput = document.getElementById('fileInput');
         const previewImage = document.getElementById('previewImage');
         const uploadSection = document.getElementById('uploadSection');
@@ -477,7 +476,6 @@
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
         
-        // 结果元素
         const characterDisplay = document.getElementById('characterDisplay');
         const structureResult = document.getElementById('structureResult');
         const unicodeResult = document.getElementById('unicodeResult');
@@ -486,30 +484,28 @@
         const characterConfidenceBar = document.getElementById('characterConfidenceBar');
         const characterConfidenceText = document.getElementById('characterConfidenceText');
         
-        // 按钮元素
         const recognizeBtn = document.getElementById('recognizeBtn');
         const resetBtn = document.getElementById('resetBtn');
         const selectBtn = document.getElementById('selectBtn');
         
-        // API配置
+
         const API_URL = 'http://localhost:5000/recognize';
         
-        // 当前选择的文件
+
         let currentFile = null;
         
-        // 结构类型映射
+
         const structureMap = {
-            'single': { name: '单一结构', badge: 'badge-single', code: 'S' },
-            'vertical': { name: '垂直结构', badge: 'badge-vertical', code: 'V' },
-            'horizontal': { name: '水平结构', badge: 'badge-horizontal', code: 'H' },
-            'enclosed': { name: '包围结构', badge: 'badge-enclosed', code: 'E' }
+            'single': { name: '独立型', badge: 'badge-single', code: 'S' },
+            'vertical': { name: '竖叠型', badge: 'badge-vertical', code: 'V' },
+            'horizontal': { name: '横叠型', badge: 'badge-horizontal', code: 'H' },
+            'enclosed': { name: '半围型', badge: 'badge-enclosed', code: 'E' }
         };
         
-        // 文件选择事件
         fileInput.addEventListener('change', handleFileSelect);
         selectBtn.addEventListener('click', () => fileInput.click());
         
-        // 拖拽事件
+
         uploadSection.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadSection.classList.add('drag-over');
@@ -533,13 +529,13 @@
             }
         });
         
-        // 识别按钮事件
+ 
         recognizeBtn.addEventListener('click', recognizeImage);
         
-        // 重置按钮事件
+
         resetBtn.addEventListener('click', resetAll);
         
-        // 处理文件选择
+
         function handleFileSelect(e) {
             const file = e.target.files[0];
             if (file && isValidImageFile(file)) {
@@ -549,42 +545,42 @@
             }
         }
         
-        // 处理文件
+
         function handleFile(file) {
             currentFile = file;
             
-            // 预览图片
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 previewImage.src = e.target.result;
                 previewImage.style.display = 'block';
                 
-                // 显示预览和按钮
+
                 previewSection.style.display = 'flex';
                 actionButtons.style.display = 'flex';
                 uploadSection.style.display = 'none';
                 errorMessage.style.display = 'none';
                 
-                // 重置结果
+
                 resetResults();
             };
             reader.readAsDataURL(file);
         }
         
-        // 验证图片文件
+
         function isValidImageFile(file) {
             const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
             return validTypes.includes(file.type);
         }
         
-        // 识别图片
+
         async function recognizeImage() {
             if (!currentFile) {
                 showError('请先选择图片');
                 return;
             }
             
-            // 显示加载状态
+
             loading.style.display = 'block';
             recognizeBtn.disabled = true;
             errorMessage.style.display = 'none';
@@ -613,24 +609,23 @@
             }
         }
         
-        // 显示结果
+
         function displayResults(data) {
             const structureInfo = structureMap[data.structure] || 
                                  { name: data.structure, badge: '', code: '' };
             
-            // 显示文字
+
             characterDisplay.textContent = `字符 ${data.character}`;
             
-            // 显示结构信息
             structureResult.innerHTML = `
                 ${structureInfo.name}
                 <span class="structure-badge ${structureInfo.badge}">${data.structure_code}</span>
             `;
             
-            // 显示Unicode编码
+
             unicodeResult.textContent = data.character;
             
-            // 更新置信度
+
             const structureConfidence = (data.confidence.structure * 100).toFixed(1);
             const characterConfidence = (data.confidence.character * 100).toFixed(1);
             
@@ -639,15 +634,14 @@
             
             characterConfidenceBar.style.width = `${characterConfidence}%`;
             characterConfidenceText.textContent = `${characterConfidence}%`;
-            
-            // 添加成功动画
+
             characterDisplay.style.animation = 'none';
             setTimeout(() => {
                 characterDisplay.style.animation = 'pulse 0.5s';
             }, 10);
         }
         
-        // 重置结果
+
         function resetResults() {
             characterDisplay.textContent = '等待识别结果...';
             structureResult.textContent = '-';
@@ -659,7 +653,7 @@
             characterConfidenceText.textContent = '0%';
         }
         
-        // 重置所有
+
         function resetAll() {
             currentFile = null;
             fileInput.value = '';
@@ -673,18 +667,16 @@
             resetResults();
         }
         
-        // 显示错误
         function showError(message) {
             errorText.textContent = message;
             errorMessage.style.display = 'block';
             
-            // 自动隐藏错误信息
+
             setTimeout(() => {
                 errorMessage.style.display = 'none';
             }, 5000);
         }
         
-        // 初始化
         resetAll();
     </script>
 </body>

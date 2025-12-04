@@ -146,7 +146,6 @@ class THOCRSystem:
         except Exception as e:
             return {"status": "error", "error": f"Failed to recognizer: {str(e)}"}
 
-# ========== CORS 中间件 ==========
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
