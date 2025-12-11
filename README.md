@@ -1,18 +1,18 @@
 
 # TangutHierarchicalOCR
-Botsumizu
+botsumizu
 ## Introduction
 
 **TangutHierarchicalOCR (THOCR)** is a hierarchical OCR framework designed for recognizing Tangut characters.
 The system consists of two major components:
 
 1. **Structure Classifier** – predicts the structural type of a Tangut character.
-2. **Character Recognizer Package** – contains four specialized recognizers corresponding to each structure type.
+2. **Character Recognizer Package** – contains four specialized recognizers corresponding to each structure type.The character classified will be recognized here.
 
 The overall workflow is illustrated below:
 
 ```
-Input -> StructureClassifier ──► E → EnclosedRecognizer     ─┐
+Input -> StructureClassifier ->  E → EnclosedRecognizer     ─┐
                                  H → HorizontalRecognizer   ─┤→ Output
                                  V → VerticalRecognizer     ─┤
                                  S → SingleRecognizer       ─┘
